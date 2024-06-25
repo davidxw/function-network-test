@@ -9,7 +9,7 @@ The repo consist if two levels of Functions:
     * L2.1 can only be accessed from L1.1, using access restrictions
     * L2.2 can only be accessed from L1.2, using a private endpoint on L2.2 and an NSG
 
-![Overview Diagram](./overview.drawio.svg)
+![Overview Diagram](./azure.drawio.svg)
 
 Each function app has 2 endpoints:
 
