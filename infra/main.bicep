@@ -24,6 +24,9 @@ var subnet1cidr = '10.1.1.0/24'
 var subnet2name = 'subnet2'
 var subnet2cidr = '10.1.2.0/24'
 
+var subnet2_2name = 'subnet2-2'
+var subnet2_2cidr = '10.1.3.0/24'
+
 // Virtual network with two subnets, one each for the backend of each L1 function
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
@@ -67,19 +70,59 @@ resource subnet2 'Microsoft.Network/virtualNetworks/subnets@2023-11-01' = {
   parent: vnet
   properties: {
     addressPrefix: subnet2cidr
-    serviceEndpoints: [
-      {
-        service: 'Microsoft.Web'
-        locations: [
-          '*'
-        ]
-      }
-    ]
     delegations: [
       {
         name: '0'
         properties: {
           serviceName: 'Microsoft.Web/serverFarms'
+        }
+      }
+    ]
+  }
+}
+
+resource subnet2_2 'Microsoft.Network/virtualNetworks/subnets@2023-11-01' = {
+  name: subnet2_2name
+  parent: vnet
+  properties: {
+    addressPrefix: subnet2_2cidr
+    privateEndpointNetworkPolicies: 'NetworkSecurityGroupEnabled'
+    networkSecurityGroup: {
+      id: subnet2_2_nsg.id
+    }
+  }
+}
+
+resource subnet2_2_nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
+  name: '${subnet2_2name}_nsg'
+  location: location
+  properties: {
+    securityRules: [
+      {
+        id: 'AllowSubnet2AnyInbound'
+        name: 'AllowSubnet2AnyInbound'
+        properties: {
+          access: 'Allow'
+          destinationAddressPrefix: '*'  
+          destinationPortRange: '*'
+          direction: 'Inbound'
+          priority: 110
+          protocol: '*'
+          sourceAddressPrefix: subnet2cidr
+          sourcePortRange: '*'
+        }
+      },{
+        id: 'DenyAnyCustomAnyInbound'
+        name: 'DenyAnyCustomAnyInbound'
+        properties: {
+          access: 'Deny'
+          destinationAddressPrefix: '*'  
+          destinationPortRange: '*'
+          direction: 'Inbound'
+          priority: 200
+          protocol: '*'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
         }
       }
     ]
@@ -102,7 +145,7 @@ resource blobStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 }
 
 // function app L1 1
-module functionAppL1_1 './functionApp.bicep' = {
+module functionAppL1_1 './functionAppL1.bicep' = {
   name: functionAppL1Name1Token
   params: {
     location: location
@@ -113,7 +156,7 @@ module functionAppL1_1 './functionApp.bicep' = {
 }
 
 // function app L1 2
-module functionAppL1_2 './functionApp.bicep' = {
+module functionAppL1_2 './functionAppL1.bicep' = {
   name: functionAppL1Name2Token
   params: {
     location: location
@@ -124,7 +167,7 @@ module functionAppL1_2 './functionApp.bicep' = {
 }
 
 // function app L2 1
-module functionAppL2_1 './functionApp.bicep' = {
+module functionAppL2_1 './functionAppL2accessRestrictions.bicep' = {
   name: functionAppL2Name1Token
   params: {
     location: location
@@ -135,12 +178,13 @@ module functionAppL2_1 './functionApp.bicep' = {
 }
 
 // function app L2 2
-module functionAppL2_2 './functionApp.bicep' = {
+module functionAppL2_2 './functionAppL2privateEndpoint.bicep' = {
   name: functionAppL2Name2Token
   params: {
     location: location
     blobStorageAccountName: blobStorageAccount.name
     functionAppName: functionAppL2Name2Token
-    inboundSubnetId: subnet2.id
+    privateEndpointSubnetId: subnet2_2.id
+    virtualNetworkId: vnet.id
   }
 }

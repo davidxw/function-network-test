@@ -1,8 +1,7 @@
 
 param blobStorageAccountName string
 param functionAppName string
-param backendSubnetId string = ''
-param inboundSubnetId string = ''
+param inboundSubnetId string
 param location string
 
 var inboundSubnetNameIndex = inboundSubnetId == '' ? 0 : lastIndexOf(inboundSubnetId, '/')
@@ -38,7 +37,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
     type: 'SystemAssigned'
   }
   kind: 'functionapp,linux'
-  properties: backendSubnetId == '' ? {
+  properties: {
     httpsOnly: true
     serverFarmId: appService.id
     clientAffinityEnabled: true
@@ -56,16 +55,7 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
         }
       ]
     }
-  } : {
-    httpsOnly: true
-    serverFarmId: appService.id
-    virtualNetworkSubnetId: backendSubnetId
-    vnetRouteAllEnabled: true
-    clientAffinityEnabled: true
-    siteConfig: {
-      linuxFxVersion: 'DOTNET-ISOLATED|8.0'
-    }
-  }
+  } 
   resource config 'config@2022-09-01' = {
     name: 'appsettings'
     properties: {

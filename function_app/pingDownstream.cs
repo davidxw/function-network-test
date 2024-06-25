@@ -30,11 +30,20 @@ namespace Company.Function
             handler.ClientCertificateOptions = ClientCertificateOption.Manual;
             handler.ServerCertificateCustomValidationCallback =
                 (httpRequestMessage, cert, cetChain, policyErrors) =>
-            {
-                return true;
-            };
+                {
+                    return true;
+                };
 
-            _httpClient = new HttpClient(handler);
+            int.TryParse(config["TIMEOUT"], out int tryTimeOutInSeconds);
+
+            var timeOutInSeconds = tryTimeOutInSeconds > 0 ? tryTimeOutInSeconds : 10;
+
+            logger.LogInformation($"HttpTimeout set to {timeOutInSeconds} seconds.");
+
+            _httpClient = new HttpClient(handler)
+            {
+                Timeout = new TimeSpan(0, 0, timeOutInSeconds)
+            };
         }
 
         [Function("pingDownstream")]
